@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>DAIMON</title>
+<style>
+/* ════════════════════════════════════════
+   VARIABLES
+════════════════════════════════════════ */
+:root {
+  --bg:        #0a0a0a;
+  --bg2:       #111111;
+  --bg3:       #181818;
+  --gold:      #c9a84c;
+  --gold-dim:  #7a5e1e;
+  --gold-mid:  #5a4614;
+  --gold-glow: rgba(201,168,76,0.10);
+  --text:      #e0d8c8;
+  --text-dim:  #6a6050;
+  --text-mid:  #9a8868;
+  --radius:    10px;
+  --radius-sm: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  min-height: 100%;
+}
+
+/* ════════════════════════════════════════
+   SCREEN SWITCHER
+════════════════════════════════════════ */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; }
+
+/* ════════════════════════════════════════
+   ① DROP SCREEN
+════════════════════════════════════════ */
+#screen-drop {
+  display: none;
+  flex-direction: column;
+  height: 100vh;
+  padding: 0 20px;
+  overflow: hidden;
+}
+#screen-drop.active {
+  display: flex;
+}
+
+.drop-label {
+  padding-top: 52px;
+  padding-bottom: 10px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+#drop-input {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #272217;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.65;
+  padding: 20px 0;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  caret-color: var(--gold);
+  -webkit-appearance: none;
+}
+#drop-input::placeholder {
+  color: var(--text-dim);
+  font-size: 18px;
+}
+
+.drop-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.10em;
+  text-align: center;
+  padding: 14px 0 20px;
+}
+
+#btn-drop-save {
+  width: 100%;
+  padding: 22px;
+  background: var(--gold);
+  color: #0a0a0a;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-bottom: 44px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, transform 0.08s;
+}
+#btn-drop-save:active {
+  background: var(--gold-dim);
+  transform: scale(0.985);
+}
+
+/* ─ CHECK OVERLAY ─ */
+#check-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0a0a0a;
+  z-index: 999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#check-overlay.show { display: flex; }
+
+.check-mark {
+  font-size: 72px;
+  color: var(--gold);
+  line-height: 1;
+  animation: fadeIn 0.15s ease;
+}
+.check-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 0.16em;
+  margin-top: 20px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─ FAIL OVERLAY ─ */
+#fail-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0a0a0a;
+  z-index: 999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#fail-overlay.show { display: flex; }
+
+.fail-mark {
+  font-size: 64px;
+  color: #8a3a3a;
+  line-height: 1;
+  animation: fadeIn 0.15s ease;
+}
+
+/* ─ POST ACTIONS ─ */
+#drop-post-actions {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 998;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 24px;
+}
+#drop-post-actions.show { display: flex; }
+
+#btn-another {
+  width: 100%;
+  max-width: 320px;
+  padding: 20px;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+#btn-another:active { background: var(--gold-glow); }
+
+#btn-drop-close {
+  width: 100%;
+  max-width: 320px;
+  padding: 20px;
+  background: transparent;
+  border: 1px solid #222;
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ════════════════════════════════════════
+   ② SHOPPING SCREEN
+════════════════════════════════════════ */
+#screen-shopping {
+  padding-bottom: 80px;
+}
+
+.shop-header {
+  padding: 48px 20px 20px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.shop-header-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+}
+.shop-header-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-top: 10px;
+}
+
+.shop-main { padding: 0 16px; margin-top: 24px; }
+
+.shop-count {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+
+#shop-empty {
+  display: none;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 2.2;
+  letter-spacing: 0.06em;
+  border: 1px dashed #1c1c1c;
+  border-radius: var(--radius);
+}
+
+#shopping-list { display: flex; flex-direction: column; gap: 2px; }
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 4px;
+  border-bottom: 1px solid #141414;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s;
+}
+.item-row.checking { opacity: 0.3; pointer-events: none; }
+
+.item-check {
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--gold-dim);
+  border-radius: 5px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.item-row:active .item-check {
+  background: var(--gold-glow);
+  border-color: var(--gold);
+}
+.item-check-inner {
+  font-size: 14px;
+  color: var(--gold);
+  display: none;
+}
+.item-body {
+  flex: 1;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text);
+  letter-spacing: 0.03em;
+}
+.item-date {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.shop-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 20px 32px;
+  background: var(--bg);
+  border-top: 1px solid #141414;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.10em;
+}
+
+/* ════════════════════════════════════════
+   ③ ORGANIZE SCREEN
+════════════════════════════════════════ */
+#screen-organize {
+  padding-bottom: 60px;
+}
+
+.org-header {
+  background: var(--bg);
+  border-bottom: 1px solid var(--gold-dim);
+  padding: 24px 20px 16px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.org-header::after {
+  content: '';
+  display: block;
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 1px;
+  background: var(--gold-dim);
+}
+.org-header-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  line-height: 1;
+}
+.org-header-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.07em;
+  margin-top: 8px;
+}
+
+.org-main { padding: 0 16px; }
+
+/* 入力エリア */
+.input-area { padding: 22px 0 8px; }
+
+textarea#memo-input {
+  width: 100%;
+  min-height: 148px;
+  background: var(--bg3);
+  border: 1px solid #272217;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.7;
+  padding: 16px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  caret-color: var(--gold);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+textarea#memo-input:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
+
+.btn-save {
+  width: 100%;
+  padding: 18px;
+  margin-top: 12px;
+  background: var(--gold-dim);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.btn-save:active { background: var(--gold-mid); }
+
+/* トースト */
+#toast {
+  display: none;
+  background: var(--bg3);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius-sm);
+  color: var(--text-mid);
+  font-size: 13px;
+  padding: 10px 16px;
+  margin-top: 10px;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid #1c1c1c;
+  margin: 20px 0 16px;
+}
+
+.search-row {
+  margin-bottom: 12px;
+}
+.search-row input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid #272217;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  font-family: inherit;
+  caret-color: var(--gold);
+  -webkit-appearance: none;
+}
+.search-row input:focus { border-color: var(--gold-dim); }
+.search-row input::placeholder { color: var(--text-dim); }
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.btn-action-gold, .btn-action-crimson, .btn-action-select {
+  flex: 1 1 calc(50% - 5px);
+  min-width: 0;
+  padding: 14px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.btn-action-gold {
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+}
+.btn-action-gold:active { background: var(--gold-glow); }
+
+.btn-action-select {
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+}
+.btn-action-select:active { background: var(--gold-glow); }
+
+.btn-action-crimson {
+  flex: 1 1 100%;
+  background: transparent;
+  border: 1px solid #5a1e1e;
+  color: #c87070;
+}
+.btn-action-crimson:active { background: rgba(200,112,112,0.08); }
+
+/* ─ メモカード選択状態 ─ */
+.memo-card {
+  position: relative;
+}
+.memo-card.selected {
+  border-color: var(--gold-dim);
+  background: #141008;
+}
+.memo-select-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--gold-dim);
+  border-radius: 4px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  font-size: 12px;
+  color: var(--gold);
+}
+.memo-card.selected .memo-select-check {
+  background: var(--gold-glow);
+  border-color: var(--gold);
+}
+.memo-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.list-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+#memo-count {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+#org-empty {
+  display: none;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 2.2;
+  letter-spacing: 0.04em;
+  border: 1px dashed #1c1c1c;
+  border-radius: var(--radius);
+  margin-top: 10px;
+}
+
+.memo-card {
+  background: var(--bg2);
+  border: 1px solid #1c1c1c;
+  border-radius: var(--radius);
+  padding: 14px 14px 10px;
+  margin-bottom: 8px;
+}
+.memo-text {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.memo-text mark {
+  background: var(--gold-glow);
+  color: var(--gold);
+  border-radius: 2px;
+}
+.memo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #1a1a1a;
+}
+.memo-date {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+.memo-actions { display: flex; gap: 8px; }
+.btn-copy, .btn-del {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.btn-copy {
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+}
+.btn-copy:active { background: var(--gold-glow); }
+.btn-del {
+  background: transparent;
+  border: 1px solid #3a1a1a;
+  color: #8a4a4a;
+}
+.btn-del:active { background: rgba(138,74,74,0.15); }
+
+/* 削除確認 */
+#confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#confirm-overlay.show { display: flex; }
+
+.confirm-box {
+  background: var(--bg2);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  padding: 28px 20px 20px;
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+.confirm-box p {
+  font-size: 15px;
+  color: var(--text);
+  letter-spacing: 0.06em;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.confirm-btns { display: flex; gap: 10px; }
+.btn-confirm-cancel {
+  flex: 1;
+  padding: 15px;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  border-radius: var(--radius-sm);
+  color: var(--text-mid);
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-confirm-ok {
+  flex: 1;
+  padding: 15px;
+  background: var(--gold-mid);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  letter-spacing: 0.08em;
+}
+.btn-confirm-ok:active { background: var(--gold-dim); }
+
+/* ════════════════════════════════════════
+   NAV（Organize画面のみ表示）
+════════════════════════════════════════ */
+.org-nav {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding: 12px 20px;
+  border-top: 1px solid #1a1a1a;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg);
+}
+.org-nav a {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.10em;
+  text-decoration: none;
+  padding: 6px 10px;
+}
+.org-nav a:hover { color: var(--text-mid); }
+</style>
+</head>
+<body>
+
+<!-- ════════ ① DROP ════════ -->
+<div id="screen-drop" class="screen">
+  <div class="drop-label">一声だけ預ける</div>
+  <textarea
+    id="drop-input"
+    placeholder="今のひらめきを一声で"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
+  ></textarea>
+  <div class="drop-sub">保存したら戻る</div>
+  <button id="btn-drop-save" onclick="dropSave()">預ける</button>
+</div>
+
+<!-- ✓ オーバーレイ -->
+<div id="check-overlay">
+  <div class="check-mark">✓</div>
+  <div class="check-sub">預かった。戻ろう。</div>
+</div>
+
+<!-- × 失敗オーバーレイ -->
+<div id="fail-overlay">
+  <div class="fail-mark">×</div>
+</div>
+
+<!-- 保存後アクション -->
+<div id="drop-post-actions">
+  <button id="btn-another" onclick="dropAnother()">もう一声</button>
+  <button id="btn-drop-close" onclick="dropClose()">閉じる</button>
+</div>
+
+<!-- ════════ ② SHOPPING ════════ -->
+<div id="screen-shopping" class="screen">
+  <div class="shop-header">
+    <div class="shop-header-title">買う物だけ</div>
+    <div class="shop-header-sub">ここにある物だけ買う。</div>
+  </div>
+  <div class="shop-main">
+    <div class="shop-count" id="shop-count"></div>
+    <div id="shop-empty">
+      買う物はまだない。<br>
+      Dropから「買うもの、〇〇」で<br>
+      追加できる。
+    </div>
+    <div id="shopping-list"></div>
+  </div>
+  <div class="shop-footer">ここに無い物は、今日は買わない。</div>
+</div>
+
+<!-- ════════ ③ ORGANIZE ════════ -->
+<div id="screen-organize" class="screen">
+  <header class="org-header">
+    <div class="org-header-title">ひらめき箱</div>
+    <div class="org-header-sub">思いつきを逃がさず、あとでAIに整理してもらうための小さな箱。</div>
+  </header>
+
+  <div class="org-main">
+    <div class="input-area">
+      <textarea id="memo-input"
+        placeholder="思いついたことをそのまま入れる。音声入力でもOK。"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      ></textarea>
+      <button class="btn-save" onclick="saveMemo()">放り込む</button>
+    </div>
+
+    <div id="toast"></div>
+    <hr class="section-divider">
+
+    <div class="search-row">
+      <input type="search" id="search-input" placeholder="メモを検索" oninput="renderList()" autocomplete="off">
+    </div>
+
+    <div class="action-row">
+      <button class="btn-action-gold" onclick="copyAll()">全部コピー</button>
+      <button class="btn-action-select" onclick="copySelected()">選択コピー</button>
+      <button class="btn-action-crimson" onclick="copyForZero()">AI整理コピー</button>
+    </div>
+
+    <div class="list-header">
+      <span class="list-label">未整理リスト</span>
+      <span id="memo-count"></span>
+    </div>
+
+    <div id="org-empty">まだ何もない。<br>最初のひらめきを放り込んでみて。</div>
+    <div id="memo-list"></div>
+  </div>
+
+  <nav class="org-nav">
+    <a href="#drop">Drop</a>
+    <a href="#shopping">買う物</a>
+    <a href="#organize">整理</a>
+  </nav>
+</div>
+
+<!-- 削除確認 -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <p>このひらめきを削除しますか？</p>
+    <div class="confirm-btns">
+      <button class="btn-confirm-cancel" onclick="closeConfirm()">キャンセル</button>
+      <button class="btn-confirm-ok" onclick="confirmDelete()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   SHARED STATE
+════════════════════════════════════════ */
+const STORAGE_KEY = 'hirameki_memos_v1';
+
+function loadMemos() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  } catch(e) { return []; }
+}
+
+function saveMemos(memos) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+  } catch(e) {}
+}
+
+/* ════════════════════════════════════════
+   ROUTER
+════════════════════════════════════════ */
+function route() {
+  const hash = location.hash.replace('#', '') || 'organize';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+  if (hash === 'drop') {
+    document.getElementById('screen-drop').classList.add('active');
+    initDrop();
+  } else if (hash === 'shopping') {
+    document.getElementById('screen-shopping').classList.add('active');
+    renderShopping();
+  } else {
+    document.getElementById('screen-organize').classList.add('active');
+    initOrganize();
+  }
+}
+
+window.addEventListener('hashchange', route);
+window.addEventListener('DOMContentLoaded', route);
+
+/* ════════════════════════════════════════
+   ① DROP
+════════════════════════════════════════ */
+const SHOPPING_WORDS = [
+  '買う物', '買うもの',
+  '買い物', '買い物メモ',
+  '買っとく', '買っとかな', '買っておく', '買っておかな',
+  'コーナンで', 'コーナン',
+  'ホームセンターで', 'ホームセンター',
+  '材料買う', '材料',
+  '道具買う', '道具',
+  '消耗品',
+];
+
+let dropAutoSaveTimer = null;
+let dropLastSaved = '';
+
+function classifyDrop(text) {
+  for (const w of SHOPPING_WORDS) {
+    if (text.startsWith(w)) return 'shopping';
+  }
+  return 'hirameki';
+}
+
+function stripPrefix(text) {
+  for (const w of SHOPPING_WORDS) {
+    if (text.startsWith(w)) {
+      return text.slice(w.length).replace(/^[、,\s]+/, '').trim();
+    }
+  }
+  return text;
+}
+
+function initDrop() {
+  // オーバーレイとポストアクションをリセット
+  document.getElementById('check-overlay').classList.remove('show');
+  document.getElementById('fail-overlay').classList.remove('show');
+  document.getElementById('drop-post-actions').classList.remove('show');
+
+  const input = document.getElementById('drop-input');
+  input.value = '';
+  dropLastSaved = '';
+  clearTimeout(dropAutoSaveTimer);
+
+  setTimeout(() => input.focus(), 80);
+
+  input.oninput = () => {
+    clearTimeout(dropAutoSaveTimer);
+    dropAutoSaveTimer = setTimeout(() => {
+      const text = input.value.trim();
+      if (text && text !== dropLastSaved) dropSave();
+    }, 2000);
+  };
+}
+
+function dropSave() {
+  clearTimeout(dropAutoSaveTimer);
+
+  const input = document.getElementById('drop-input');
+  const rawText = input.value.trim();
+  if (!rawText) return;
+  if (rawText === dropLastSaved) return;
+
+  const category = classifyDrop(rawText);
+  const body = (category === 'shopping') ? stripPrefix(rawText) : rawText;
+  if (!body) return;
+
+  const memo = {
+    id: Date.now().toString(),
+    body,
+    created_at: new Date().toISOString(),
+    category,
+    source: 'daimon_drop',
+    mode: 'work_focus',
+    completed: false,
+  };
+
+  try {
+    const memos = loadMemos();
+    memos.unshift(memo);
+    saveMemos(memos);
+  } catch(e) {
+    showFail();
+    return;
+  }
+
+  dropLastSaved = rawText;
+  input.value = '';
+
+  if (navigator.vibrate) navigator.vibrate(50);
+  showCheck();
+}
+
+function showCheck() {
+  const overlay = document.getElementById('check-overlay');
+  overlay.classList.add('show');
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    document.getElementById('drop-post-actions').classList.add('show');
+  }, 1200);
+}
+
+function showFail() {
+  const overlay = document.getElementById('fail-overlay');
+  overlay.classList.add('show');
+  setTimeout(() => overlay.classList.remove('show'), 1000);
+}
+
+function dropAnother() {
+  document.getElementById('drop-post-actions').classList.remove('show');
+  dropLastSaved = '';
+  const input = document.getElementById('drop-input');
+  input.value = '';
+  setTimeout(() => input.focus(), 80);
+}
+
+function dropClose() {
+  if (window.history.length > 1) window.history.back();
+  else window.close();
+}
+
+/* ════════════════════════════════════════
+   ② SHOPPING
+════════════════════════════════════════ */
+function renderShopping() {
+  const memos = loadMemos();
+  const items = memos.filter(m => m.category === 'shopping' && !m.completed);
+
+  const list = document.getElementById('shopping-list');
+  const empty = document.getElementById('shop-empty');
+  const count = document.getElementById('shop-count');
+
+  if (items.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    count.textContent = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  count.textContent = `${items.length}件`;
+
+  list.innerHTML = items.map(item => `
+    <div class="item-row" data-id="${item.id}" onclick="checkItem('${item.id}')">
+      <div class="item-check">
+        <span class="item-check-inner">✓</span>
+      </div>
+      <div class="item-body">${escapeHtml(item.body || item.text || '')}</div>
+      <div class="item-date">${formatDateShort(item.created_at || item.createdAt)}</div>
+    </div>
+  `).join('');
+}
+
+function checkItem(id) {
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  if (!row) return;
+  row.querySelector('.item-check-inner').style.display = 'block';
+  row.classList.add('checking');
+
+  setTimeout(() => {
+    const memos = loadMemos();
+    const idx = memos.findIndex(m => m.id === id);
+    if (idx !== -1) {
+      memos[idx].completed = true;
+      saveMemos(memos);
+    }
+    renderShopping();
+  }, 350);
+}
+
+/* ════════════════════════════════════════
+   ③ ORGANIZE
+════════════════════════════════════════ */
+let orgMemos = [];
+let deleteTargetId = null;
+let toastTimer = null;
+let selectedIds = new Set();
+
+const SAVE_MESSAGES = [
+  '保存した。整理はあとでいい。',
+  'ひらめき回収。',
+  'まず残せた。それでOK。',
+  '逃がさなかった。',
+  '保存完了。考えるのは後でいい。',
+];
+
+function initOrganize() {
+  try {
+    orgMemos = loadMemos();
+  } catch(e) { orgMemos = []; }
+  renderList();
+  // フォーカスはOrganizeでは任意
+}
+
+function saveMemo() {
+  const input = document.getElementById('memo-input');
+  const text = input.value.trim();
+  if (!text) { showToast('何か入力してから放り込んで。'); return; }
+
+  const memo = {
+    id: Date.now().toString(),
+    body: text,
+    created_at: new Date().toISOString(),
+    category: 'hirameki',
+    source: 'organize',
+    completed: false,
+  };
+
+  orgMemos.unshift(memo);
+  saveMemos(orgMemos);
+  input.value = '';
+  renderList();
+  showToast(SAVE_MESSAGES[Math.floor(Math.random() * SAVE_MESSAGES.length)]);
+  input.focus();
+}
+
+function renderList() {
+  // 最新データをlocalStorageから取得（Drop経由で保存されたものも反映）
+  orgMemos = loadMemos();
+
+  const query = document.getElementById('search-input').value.trim().toLowerCase();
+  const filtered = query
+    ? orgMemos.filter(m => (m.body||m.text||'').toLowerCase().includes(query))
+    : orgMemos;
+
+  const list = document.getElementById('memo-list');
+  const empty = document.getElementById('org-empty');
+  const count = document.getElementById('memo-count');
+
+  count.textContent = orgMemos.length > 0
+    ? `${filtered.length}件${query ? ' / 全' + orgMemos.length + '件' : ''}`
+    : '';
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    empty.innerHTML = query && orgMemos.length > 0
+      ? `「${query}」は見つからなかった。`
+      : 'まだ何もない。<br>最初のひらめきを放り込んでみて。';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  list.innerHTML = filtered.map(m => {
+    const rawText = m.body || m.text || '';
+    const displayText = query
+      ? escapeHtml(rawText).replace(
+          new RegExp(escapeRegex(escapeHtml(query)), 'gi'),
+          s => `<mark>${s}</mark>`
+        )
+      : escapeHtml(rawText);
+    const isSelected = selectedIds.has(m.id);
+
+    return `
+      <div class="memo-card${isSelected ? ' selected' : ''}" data-id="${m.id}">
+        <div class="memo-card-top">
+          <span class="memo-select-check" onclick="toggleSelect('${m.id}')">${isSelected ? '✓' : ''}</span>
+          <div class="memo-text" style="flex:1">${displayText}</div>
+        </div>
+        <div class="memo-footer">
+          <span class="memo-date">${formatDate(m.created_at || m.createdAt)}</span>
+          <div class="memo-actions">
+            <button class="btn-copy" onclick="copyMemo('${m.id}')">コピー</button>
+            <button class="btn-del" onclick="requestDelete('${m.id}')">削除</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleSelect(id) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+  } else {
+    selectedIds.add(id);
+  }
+  renderList();
+}
+
+function copySelected() {
+  if (selectedIds.size === 0) {
+    showToast('メモを選択してください。');
+    return;
+  }
+  const selected = orgMemos.filter(m => selectedIds.has(m.id));
+  const memoLines = selected.map((m, i) =>
+    `${i + 1}. ${m.body || m.text || ''}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`
+  ).join('\n\n');
+
+  const text = `以下のDAIMONメモを整理してください。
+
+【選択メモ】
+${memoLines}
+
+整理してほしいこと：
+- 重要度順に並べる
+- 今すぐやること
+- 後で考えること
+- 買う物
+- 明日の一手
+- DAIMON改善案`;
+
+  copyText(text, '選択メモをコピーしました。');
+}
+
+function copyMemo(id) {
+  const memo = orgMemos.find(m => m.id === id);
+  if (!memo) return;
+  copyText(memo.body || memo.text || '', 'コピーしました。AIに貼って整理できます。');
+}
+
+function copyAll() {
+  if (orgMemos.length === 0) { showToast('メモがまだない。'); return; }
+  const lines = ['【ひらめきメモ一覧】', ''];
+  orgMemos.forEach((m, i) => {
+    lines.push(`${i + 1}. ${m.body || m.text || ''}`);
+    lines.push(`   保存日時：${formatDate(m.created_at || m.createdAt)}`);
+    lines.push('');
+  });
+  copyText(lines.join('\n'), '全メモをコピーした。');
+}
+
+function copyForZero() {
+  if (orgMemos.length === 0) { showToast('メモがまだない。'); return; }
+  const memoLines = orgMemos.map((m, i) =>
+    `${i + 1}. ${m.body || m.text || ''}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`
+  ).join('\n\n');
+
+  const text = `以下のひらめきメモを整理してください。
+
+目的：
+・仕事に使えるもの
+・副業や商品アイデアに使えるもの
+・発信ネタに使えるもの
+・販売コピーに使えるもの
+・AIへの作業依頼にできるもの
+・今すぐやる一手
+・後回しでいいもの
+
+に分けて整理してください。
+
+その後、次の一手を1つだけ提案してください。
+
+【ひらめきメモ】
+${memoLines}`;
+
+  copyText(text, 'AIに貼って整理できる形でコピーしました。');
+}
+
+function requestDelete(id) {
+  deleteTargetId = id;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+function closeConfirm() {
+  deleteTargetId = null;
+  document.getElementById('confirm-overlay').classList.remove('show');
+}
+function confirmDelete() {
+  if (!deleteTargetId) return;
+  orgMemos = orgMemos.filter(m => m.id !== deleteTargetId);
+  selectedIds.delete(deleteTargetId);
+  saveMemos(orgMemos);
+  renderList();
+  closeConfirm();
+  showToast('削除した。');
+}
+
+/* ════════════════════════════════════════
+   SHARED UTILS
+════════════════════════════════════════ */
+function copyText(text, successMsg) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast(successMsg))
+      .catch(() => fallbackCopy(text, successMsg));
+  } else {
+    fallbackCopy(text, successMsg);
+  }
+}
+
+function fallbackCopy(text, successMsg) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast(successMsg);
+  } catch(e) {
+    showToast('コピーできなかった。手動でコピーして。');
+  }
+  document.body.removeChild(ta);
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2800);
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const Y = d.getFullYear();
+  const M = String(d.getMonth()+1).padStart(2,'0');
+  const D = String(d.getDate()).padStart(2,'0');
+  const h = String(d.getHours()).padStart(2,'0');
+  const m = String(d.getMinutes()).padStart(2,'0');
+  return `${Y}/${M}/${D} ${h}:${m}`;
+}
+
+function formatDateShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const M = String(d.getMonth()+1).padStart(2,'0');
+  const D = String(d.getDate()).padStart(2,'0');
+  const h = String(d.getHours()).padStart(2,'0');
+  const m = String(d.getMinutes()).padStart(2,'0');
+  return `${M}/${D} ${h}:${m}`;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/* ─── KEYBOARD (Organize) ─── */
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') saveMemo();
+  if (e.key === 'Escape') closeConfirm();
+});
+
+document.getElementById('confirm-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirm();
+});
+
+/* ─── SERVICE WORKER ─── */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
