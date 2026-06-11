@@ -118,32 +118,48 @@ html, body {
   transform: scale(0.985);
 }
 
-/* ─ CHECK OVERLAY ─ */
-#check-overlay {
+/* ─ 保存完了インライン表示 ─ */
+#drop-feedback {
   display: none;
-  position: fixed;
-  inset: 0;
-  background: #0a0a0a;
-  z-index: 999;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  text-align: center;
+  z-index: 50;
+  pointer-events: none;
+  animation: fadeIn 0.15s ease;
 }
-#check-overlay.show { display: flex; }
+#drop-feedback.show { display: block; }
 
-.check-mark {
-  font-size: 72px;
+.feedback-check {
+  font-size: 64px;
   color: var(--gold);
-  line-height: 1;
-  animation: fadeIn 0.15s ease;
+  line-height: 1.2;
 }
-.check-sub {
-  font-size: 13px;
-  color: var(--text-dim);
-  letter-spacing: 0.16em;
-  margin-top: 20px;
-  animation: fadeIn 0.15s ease;
+.feedback-line1 {
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: 0.18em;
+  margin-top: 14px;
 }
+.feedback-line2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.22em;
+  margin-top: 8px;
+}
+
+/* 入力欄を一時的に隠す用 */
+#screen-drop.feedback-active #drop-input,
+#screen-drop.feedback-active .drop-sub,
+#screen-drop.feedback-active #btn-drop-save,
+#screen-drop.feedback-active .drop-label {
+  opacity: 0.06;
+  transition: opacity 0.15s;
+}
+#screen-drop { position: relative; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.85); }
@@ -168,52 +184,6 @@ html, body {
   color: #8a3a3a;
   line-height: 1;
   animation: fadeIn 0.15s ease;
-}
-
-/* ─ POST ACTIONS ─ */
-#drop-post-actions {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: var(--bg);
-  z-index: 998;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 40px 24px;
-}
-#drop-post-actions.show { display: flex; }
-
-#btn-another {
-  width: 100%;
-  max-width: 320px;
-  padding: 20px;
-  background: transparent;
-  border: 1px solid var(--gold-dim);
-  border-radius: var(--radius);
-  color: var(--gold);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s;
-}
-#btn-another:active { background: var(--gold-glow); }
-
-#btn-drop-close {
-  width: 100%;
-  max-width: 320px;
-  padding: 20px;
-  background: transparent;
-  border: 1px solid #222;
-  border-radius: var(--radius);
-  color: var(--text-dim);
-  font-size: 15px;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
 /* ════════════════════════════════════════
@@ -321,6 +291,66 @@ html, body {
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.10em;
+}
+
+/* ─ 購入済みエリア ─ */
+#purchased-area {
+  margin-top: 32px;
+}
+.purchased-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 4px;
+  border-top: 1px solid #1a1a1a;
+  border-bottom: 1px solid #1a1a1a;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+}
+.purchased-arrow {
+  font-size: 12px;
+  color: var(--text-dim);
+  transition: transform 0.15s;
+}
+.purchased-arrow.open { transform: rotate(90deg); }
+
+.purchased-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid #111;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.purchased-check {
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid #3a3020;
+  border-radius: 5px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--gold-dim);
+}
+.purchased-body {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+  text-decoration: line-through;
+  text-decoration-color: #3a3020;
+}
+.purchased-date {
+  font-size: 11px;
+  color: #3a3530;
+  flex-shrink: 0;
 }
 
 /* ════════════════════════════════════════
@@ -843,6 +873,13 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   <div class="drop-sub">保存したら戻る</div>
   <button id="btn-drop-save" onclick="dropSave()">預ける</button>
 
+  <!-- 保存完了インライン表示 -->
+  <div id="drop-feedback">
+    <div class="feedback-check">✓</div>
+    <div class="feedback-line1">預かった。</div>
+    <div class="feedback-line2">戻ろう。</div>
+  </div>
+
   <nav class="org-nav">
     <a href="#drop">Drop</a>
     <a href="#shopping">買う物</a>
@@ -851,21 +888,9 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   </nav>
 </div>
 
-<!-- ✓ オーバーレイ -->
-<div id="check-overlay">
-  <div class="check-mark">✓</div>
-  <div class="check-sub">預かった。戻ろう。</div>
-</div>
-
 <!-- × 失敗オーバーレイ -->
 <div id="fail-overlay">
   <div class="fail-mark">×</div>
-</div>
-
-<!-- 保存後アクション -->
-<div id="drop-post-actions">
-  <button id="btn-another" onclick="dropAnother()">もう一声</button>
-  <button id="btn-drop-close" onclick="dropClose()">閉じる</button>
 </div>
 
 <!-- ════════ ② SHOPPING ════════ -->
@@ -877,11 +902,20 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   <div class="shop-main">
     <div class="shop-count" id="shop-count"></div>
     <div id="shop-empty">
-      買う物はまだない。<br>
+      買う物はありません。<br>
       Dropから「買うもの、〇〇」で<br>
       追加できる。
     </div>
     <div id="shopping-list"></div>
+
+    <!-- 購入済みエリア -->
+    <div id="purchased-area" style="display:none;">
+      <div class="purchased-toggle" onclick="togglePurchased()">
+        <span id="purchased-toggle-label">購入済み</span>
+        <span class="purchased-arrow" id="purchased-arrow">▸</span>
+      </div>
+      <div id="purchased-list" style="display:none;"></div>
+    </div>
   </div>
   <div class="shop-footer">ここに無い物は、今日は買わない。</div>
 
@@ -1073,10 +1107,10 @@ function stripPrefix(text) {
 }
 
 function initDrop() {
-  // オーバーレイとポストアクションをリセット
-  document.getElementById('check-overlay').classList.remove('show');
+  // フィードバック表示をリセット
+  document.getElementById('drop-feedback').classList.remove('show');
+  document.getElementById('screen-drop').classList.remove('feedback-active');
   document.getElementById('fail-overlay').classList.remove('show');
-  document.getElementById('drop-post-actions').classList.remove('show');
 
   const input = document.getElementById('drop-input');
   input.value = '';
@@ -1133,12 +1167,20 @@ function dropSave() {
 }
 
 function showCheck() {
-  const overlay = document.getElementById('check-overlay');
-  overlay.classList.add('show');
+  const screen = document.getElementById('screen-drop');
+  const fb = document.getElementById('drop-feedback');
+  screen.classList.add('feedback-active');
+  fb.classList.add('show');
+
   setTimeout(() => {
-    overlay.classList.remove('show');
-    document.getElementById('drop-post-actions').classList.add('show');
-  }, 1200);
+    fb.classList.remove('show');
+    screen.classList.remove('feedback-active');
+    // そのまま次の入力を受けられる状態に戻す
+    dropLastSaved = '';
+    const input = document.getElementById('drop-input');
+    input.value = '';
+    input.focus();
+  }, 1400);
 }
 
 function showFail() {
@@ -1147,49 +1189,68 @@ function showFail() {
   setTimeout(() => overlay.classList.remove('show'), 1000);
 }
 
-function dropAnother() {
-  document.getElementById('drop-post-actions').classList.remove('show');
-  dropLastSaved = '';
-  const input = document.getElementById('drop-input');
-  input.value = '';
-  setTimeout(() => input.focus(), 80);
-}
-
-function dropClose() {
-  if (window.history.length > 1) window.history.back();
-  else window.close();
-}
-
 /* ════════════════════════════════════════
    ② SHOPPING
 ════════════════════════════════════════ */
+let purchasedOpen = false;
+
 function renderShopping() {
   const memos = loadMemos();
   const items = memos.filter(m => m.category === 'shopping' && !m.completed);
+  const purchased = memos.filter(m => m.category === 'shopping' && m.completed);
 
   const list = document.getElementById('shopping-list');
   const empty = document.getElementById('shop-empty');
   const count = document.getElementById('shop-count');
 
+  // ─ 未購入エリア ─
   if (items.length === 0) {
     list.innerHTML = '';
     empty.style.display = 'block';
     count.textContent = '';
+  } else {
+    empty.style.display = 'none';
+    count.textContent = `${items.length}件`;
+
+    list.innerHTML = items.map(item => `
+      <div class="item-row" data-id="${item.id}" onclick="checkItem('${item.id}')">
+        <div class="item-check">
+          <span class="item-check-inner">✓</span>
+        </div>
+        <div class="item-body">${escapeHtml(item.body || item.text || '')}</div>
+        <div class="item-date">${formatDateShort(item.created_at || item.createdAt)}</div>
+      </div>
+    `).join('');
+  }
+
+  // ─ 購入済みエリア ─
+  const area = document.getElementById('purchased-area');
+  const pList = document.getElementById('purchased-list');
+  const pLabel = document.getElementById('purchased-toggle-label');
+  const pArrow = document.getElementById('purchased-arrow');
+
+  if (purchased.length === 0) {
+    area.style.display = 'none';
     return;
   }
 
-  empty.style.display = 'none';
-  count.textContent = `${items.length}件`;
+  area.style.display = 'block';
+  pLabel.textContent = `購入済み（${purchased.length}件）`;
+  pList.style.display = purchasedOpen ? 'block' : 'none';
+  pArrow.classList.toggle('open', purchasedOpen);
 
-  list.innerHTML = items.map(item => `
-    <div class="item-row" data-id="${item.id}" onclick="checkItem('${item.id}')">
-      <div class="item-check">
-        <span class="item-check-inner">✓</span>
-      </div>
-      <div class="item-body">${escapeHtml(item.body || item.text || '')}</div>
-      <div class="item-date">${formatDateShort(item.created_at || item.createdAt)}</div>
+  pList.innerHTML = purchased.map(item => `
+    <div class="purchased-item" onclick="uncheckItem('${item.id}')">
+      <div class="purchased-check">✓</div>
+      <div class="purchased-body">${escapeHtml(item.body || item.text || '')}</div>
+      <div class="purchased-date">${formatDateShort(item.created_at || item.createdAt)}</div>
     </div>
   `).join('');
+}
+
+function togglePurchased() {
+  purchasedOpen = !purchasedOpen;
+  renderShopping();
 }
 
 function checkItem(id) {
@@ -1207,6 +1268,17 @@ function checkItem(id) {
     }
     renderShopping();
   }, 350);
+}
+
+/* 購入済み → タップで未購入に戻す */
+function uncheckItem(id) {
+  const memos = loadMemos();
+  const idx = memos.findIndex(m => m.id === id);
+  if (idx !== -1) {
+    memos[idx].completed = false;
+    saveMemos(memos);
+  }
+  renderShopping();
 }
 
 /* ════════════════════════════════════════
