@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daimon-v1';
+const CACHE_NAME = 'daimon-v2';
 const FILES_TO_CACHE = [
   './',
   './index.html',
