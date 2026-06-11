@@ -51,7 +51,7 @@ html, body {
   display: none;
   flex-direction: column;
   height: 100vh;
-  padding: 0 20px;
+  padding: 0 20px 64px;
   overflow: hidden;
 }
 #screen-drop.active {
@@ -799,6 +799,13 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   ></textarea>
   <div class="drop-sub">保存したら戻る</div>
   <button id="btn-drop-save" onclick="dropSave()">預ける</button>
+
+  <nav class="org-nav">
+    <a href="#drop">Drop</a>
+    <a href="#shopping">買う物</a>
+    <a href="#organize">整理</a>
+    <a href="#storage">保存先</a>
+  </nav>
 </div>
 
 <!-- ✓ オーバーレイ -->
