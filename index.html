@@ -759,6 +759,44 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   letter-spacing: 0.06em;
 }
 
+/* storage 選択コピー */
+.storage-action-row {
+  margin-bottom: 20px;
+}
+.storage-action-row .btn-action-select {
+  width: 100%;
+  flex: none;
+}
+.storage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.storage-item.selected {
+  background: #141008;
+}
+.storage-select-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--gold-dim);
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--gold);
+  transition: background 0.12s, border-color 0.12s;
+}
+.storage-item.selected .storage-select-check {
+  background: var(--gold-glow);
+  border-color: var(--gold);
+}
+.storage-item-content { flex: 1; min-width: 0; }
+
 /* ════════════════════════════════════════
    NAV（Organize画面のみ表示）
 ════════════════════════════════════════ */
@@ -908,6 +946,11 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   <div class="storage-main">
     <!-- サマリー行 -->
     <div class="storage-summary" id="storage-summary"></div>
+
+    <!-- 選択コピー -->
+    <div class="storage-action-row">
+      <button class="btn-action-select" onclick="copyStorageSelected()">選択コピー</button>
+    </div>
 
     <!-- カテゴリ別セクション -->
     <div id="storage-sections"></div>
@@ -1150,6 +1193,18 @@ function checkItem(id) {
 /* ════════════════════════════════════════
    ④ STORAGE
 ════════════════════════════════════════ */
+let storageSelectedIds = new Set();
+
+const CATEGORY_LABELS = {
+  shopping: '買う物',
+  hirameki: 'ひらめき',
+};
+const SOURCE_LABELS = {
+  daimon_drop: 'Drop',
+  organize: '整理画面',
+  index: '整理画面',
+};
+
 function renderStorage() {
   const all = loadMemos();
 
@@ -1158,7 +1213,6 @@ function renderStorage() {
   const shopping  = all.filter(m => m.category === 'shopping' && !m.completed);
   const completed = all.filter(m => m.completed);
   const fromDrop  = all.filter(m => m.source === 'daimon_drop');
-  const fromOrg   = all.filter(m => m.source === 'organize' || m.source === 'index');
 
   // サマリーチップ
   const summary = document.getElementById('storage-summary');
@@ -1188,15 +1242,76 @@ function renderStorage() {
       <div class="storage-section-title">${s.title}（${s.items.length}件）</div>
       ${s.items.length === 0
         ? '<div class="storage-empty">なし</div>'
-        : s.items.map(m => `
-            <div class="storage-item">
-              ${escapeHtml(m.body || m.text || '')}
-              <div class="storage-item-date">${formatDate(m.created_at || m.createdAt)}　${m.source ? '/ ' + m.source : ''}</div>
+        : s.items.map(m => {
+            const isSel = storageSelectedIds.has(m.id);
+            return `
+            <div class="storage-item${isSel ? ' selected' : ''}" onclick="toggleStorageSelect('${m.id}')">
+              <span class="storage-select-check">${isSel ? '✓' : ''}</span>
+              <div class="storage-item-content">
+                ${escapeHtml(m.body || m.text || '')}
+                <div class="storage-item-date">${formatDate(m.created_at || m.createdAt)}　${m.source ? '/ ' + m.source : ''}</div>
+              </div>
             </div>
-          `).join('')
+          `}).join('')
       }
     </div>
   `).join('');
+}
+
+function toggleStorageSelect(id) {
+  if (storageSelectedIds.has(id)) {
+    storageSelectedIds.delete(id);
+  } else {
+    storageSelectedIds.add(id);
+  }
+  renderStorage();
+}
+
+function copyStorageSelected() {
+  if (storageSelectedIds.size === 0) {
+    showStorageToast('メモを選択してください。');
+    return;
+  }
+  const all = loadMemos();
+  const selected = all.filter(m => storageSelectedIds.has(m.id));
+  const memoLines = selected.map((m, i) => {
+    const cat = CATEGORY_LABELS[m.category] || m.category || '不明';
+    const src = SOURCE_LABELS[m.source] || m.source || '不明';
+    return `${i + 1}. ${m.body || m.text || ''}\n   分類：${cat} / ${src}${m.completed ? '（完了済み）' : ''}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`;
+  }).join('\n\n');
+
+  const text = `以下のDAIMONメモを整理してください。
+
+【選択メモ】
+${memoLines}
+
+整理してほしいこと：
+- 重要度順に並べる
+- 今すぐやること
+- 後で考えること
+- 買う物
+- 明日の一手
+- DAIMON改善案`;
+
+  copyText(text, '選択メモをコピーしました。');
+}
+
+// storage画面用トースト（organize側のtoastが無い画面でも通知できるように）
+function showStorageToast(msg) {
+  // organize側のtoast要素を流用できないため、簡易alert風オーバーレイの代わりに
+  // check-overlayの仕組みを使わず、シンプルにコンソール + バイブで代替
+  if (navigator.vibrate) navigator.vibrate(30);
+  // 一時的なトースト要素を生成
+  let el = document.getElementById('storage-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'storage-toast';
+    el.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#181818;border:1px solid #7a5e1e;border-radius:6px;color:#9a8868;font-size:13px;padding:10px 18px;z-index:1000;letter-spacing:0.06em;white-space:nowrap;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2400);
 }
 
 /* ════════════════════════════════════════
