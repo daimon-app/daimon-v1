@@ -483,7 +483,6 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
 .btn-action-select:active { background: var(--gold-glow); }
 
 .btn-action-crimson {
-  flex: 1 1 100%;
   background: transparent;
   border: 1px solid #5a1e1e;
   color: #c87070;
@@ -614,7 +613,7 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
 .btn-del:active { background: rgba(138,74,74,0.15); }
 
 /* 削除確認 */
-#confirm-overlay {
+#confirm-overlay, #storage-confirm-overlay {
   display: none;
   position: fixed;
   inset: 0;
@@ -624,7 +623,7 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   justify-content: center;
   padding: 20px;
 }
-#confirm-overlay.show { display: flex; }
+#confirm-overlay.show, #storage-confirm-overlay.show { display: flex; }
 
 .confirm-box {
   background: var(--bg2);
@@ -759,13 +758,19 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
   letter-spacing: 0.06em;
 }
 
-/* storage 選択コピー */
+/* storage コピー・削除 */
 .storage-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 20px;
 }
+.storage-action-row .btn-action-gold,
 .storage-action-row .btn-action-select {
-  width: 100%;
-  flex: none;
+  flex: 1 1 calc(50% - 4px);
+}
+.storage-action-row .btn-action-crimson {
+  flex: 1 1 100%;
 }
 .storage-item {
   display: flex;
@@ -916,7 +921,8 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
     <div class="action-row">
       <button class="btn-action-gold" onclick="copyAll()">全部コピー</button>
       <button class="btn-action-select" onclick="copySelected()">選択コピー</button>
-      <button class="btn-action-crimson" onclick="copyForZero()">AI整理コピー</button>
+      <button class="btn-action-crimson" onclick="copyAllAI()">全部AI整理</button>
+      <button class="btn-action-crimson" onclick="copySelectedAI()">選択AI整理</button>
     </div>
 
     <div class="list-header">
@@ -947,9 +953,11 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
     <!-- サマリー行 -->
     <div class="storage-summary" id="storage-summary"></div>
 
-    <!-- 選択コピー -->
+    <!-- コピー・削除 -->
     <div class="storage-action-row">
+      <button class="btn-action-gold" onclick="copyStorageAll()">全部コピー</button>
       <button class="btn-action-select" onclick="copyStorageSelected()">選択コピー</button>
+      <button class="btn-action-crimson" onclick="requestStorageDelete()">選択削除</button>
     </div>
 
     <!-- カテゴリ別セクション -->
@@ -962,6 +970,17 @@ textarea#memo-input::placeholder { color: var(--text-dim); font-size: 15px; }
     <a href="#organize">整理</a>
     <a href="#storage">保存先</a>
   </nav>
+</div>
+
+<!-- storage 選択削除確認 -->
+<div id="storage-confirm-overlay">
+  <div class="confirm-box">
+    <p>選択したメモを削除しますか？<br>この操作は戻せません。</p>
+    <div class="confirm-btns">
+      <button class="btn-confirm-cancel" onclick="closeStorageConfirm()">キャンセル</button>
+      <button class="btn-confirm-ok" onclick="confirmStorageDelete()">削除する</button>
+    </div>
+  </div>
 </div>
 
 <!-- 削除確認 -->
@@ -1267,6 +1286,27 @@ function toggleStorageSelect(id) {
   renderStorage();
 }
 
+/* ─── storage コピー形式（プロンプトなし・メタ情報入り） ─── */
+function buildStorageLines(list) {
+  return list.map((m, i) => {
+    const cat = CATEGORY_LABELS[m.category] || m.category || '不明';
+    const src = SOURCE_LABELS[m.source] || m.source || '不明';
+    const state = m.completed ? '完了済み' : '未完了';
+    return `${i + 1}. ${m.body || m.text || ''}\n   分類：${cat}\n   保存元：${src}\n   状態：${state}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`;
+  }).join('\n\n');
+}
+
+/* ─── storage 全部コピー ─── */
+function copyStorageAll() {
+  const all = loadMemos();
+  if (all.length === 0) {
+    showStorageToast('保存データがまだない。');
+    return;
+  }
+  copyText(buildStorageLines(all), '全保存データをコピーしました。');
+}
+
+/* ─── storage 選択コピー ─── */
 function copyStorageSelected() {
   if (storageSelectedIds.size === 0) {
     showStorageToast('メモを選択してください。');
@@ -1274,26 +1314,30 @@ function copyStorageSelected() {
   }
   const all = loadMemos();
   const selected = all.filter(m => storageSelectedIds.has(m.id));
-  const memoLines = selected.map((m, i) => {
-    const cat = CATEGORY_LABELS[m.category] || m.category || '不明';
-    const src = SOURCE_LABELS[m.source] || m.source || '不明';
-    return `${i + 1}. ${m.body || m.text || ''}\n   分類：${cat} / ${src}${m.completed ? '（完了済み）' : ''}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`;
-  }).join('\n\n');
+  copyText(buildStorageLines(selected), '選択メモをコピーしました。');
+}
 
-  const text = `以下のDAIMONメモを整理してください。
+/* ─── storage 選択削除 ─── */
+function requestStorageDelete() {
+  if (storageSelectedIds.size === 0) {
+    showStorageToast('削除するメモを選択してください。');
+    return;
+  }
+  document.getElementById('storage-confirm-overlay').classList.add('show');
+}
 
-【選択メモ】
-${memoLines}
+function closeStorageConfirm() {
+  document.getElementById('storage-confirm-overlay').classList.remove('show');
+}
 
-整理してほしいこと：
-- 重要度順に並べる
-- 今すぐやること
-- 後で考えること
-- 買う物
-- 明日の一手
-- DAIMON改善案`;
-
-  copyText(text, '選択メモをコピーしました。');
+function confirmStorageDelete() {
+  const all = loadMemos();
+  const remaining = all.filter(m => !storageSelectedIds.has(m.id));
+  saveMemos(remaining);
+  storageSelectedIds.clear();
+  closeStorageConfirm();
+  renderStorage();
+  showStorageToast('選択したメモを削除しました。');
 }
 
 // storage画面用トースト（organize側のtoastが無い画面でも通知できるように）
@@ -1332,7 +1376,7 @@ const SAVE_MESSAGES = [
 
 function initOrganize() {
   try {
-    orgMemos = loadMemos();
+    orgMemos = loadMemos().filter(m => m.category !== 'shopping');
   } catch(e) { orgMemos = []; }
   renderList();
   // フォーカスはOrganizeでは任意
@@ -1362,7 +1406,8 @@ function saveMemo() {
 
 function renderList() {
   // 最新データをlocalStorageから取得（Drop経由で保存されたものも反映）
-  orgMemos = loadMemos();
+  // shopping は #shopping 画面専用なので organize では除外
+  orgMemos = loadMemos().filter(m => m.category !== 'shopping');
 
   const query = document.getElementById('search-input').value.trim().toLowerCase();
   const filtered = query
@@ -1425,56 +1470,9 @@ function toggleSelect(id) {
   renderList();
 }
 
-function copySelected() {
-  if (selectedIds.size === 0) {
-    showToast('メモを選択してください。');
-    return;
-  }
-  const selected = orgMemos.filter(m => selectedIds.has(m.id));
-  const memoLines = selected.map((m, i) =>
-    `${i + 1}. ${m.body || m.text || ''}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`
-  ).join('\n\n');
-
-  const text = `以下のDAIMONメモを整理してください。
-
-【選択メモ】
-${memoLines}
-
-整理してほしいこと：
-- 重要度順に並べる
-- 今すぐやること
-- 後で考えること
-- 買う物
-- 明日の一手
-- DAIMON改善案`;
-
-  copyText(text, '選択メモをコピーしました。');
-}
-
-function copyMemo(id) {
-  const memo = orgMemos.find(m => m.id === id);
-  if (!memo) return;
-  copyText(memo.body || memo.text || '', 'コピーしました。AIに貼って整理できます。');
-}
-
-function copyAll() {
-  if (orgMemos.length === 0) { showToast('メモがまだない。'); return; }
-  const lines = ['【ひらめきメモ一覧】', ''];
-  orgMemos.forEach((m, i) => {
-    lines.push(`${i + 1}. ${m.body || m.text || ''}`);
-    lines.push(`   保存日時：${formatDate(m.created_at || m.createdAt)}`);
-    lines.push('');
-  });
-  copyText(lines.join('\n'), '全メモをコピーした。');
-}
-
-function copyForZero() {
-  if (orgMemos.length === 0) { showToast('メモがまだない。'); return; }
-  const memoLines = orgMemos.map((m, i) =>
-    `${i + 1}. ${m.body || m.text || ''}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`
-  ).join('\n\n');
-
-  const text = `以下のひらめきメモを整理してください。
+/* ─── AI整理プロンプト生成 ─── */
+function buildAIPrompt(memoLines) {
+  return `以下のDAIMONメモを整理してください。
 
 目的：
 ・仕事に使えるもの
@@ -1491,8 +1489,54 @@ function copyForZero() {
 
 【ひらめきメモ】
 ${memoLines}`;
+}
 
-  copyText(text, 'AIに貼って整理できる形でコピーしました。');
+function buildMemoLinesWithDate(list) {
+  return list.map((m, i) =>
+    `${i + 1}. ${m.body || m.text || ''}\n   保存日時：${formatDate(m.created_at || m.createdAt)}`
+  ).join('\n\n');
+}
+
+function buildMemoLinesPlain(list) {
+  return list.map((m, i) => `${i + 1}. ${m.body || m.text || ''}`).join('\n');
+}
+
+/* ─── ① 全部コピー（普通・プロンプトなし） ─── */
+function copyAll() {
+  if (orgMemos.length === 0) { showToast('メモがまだない。'); return; }
+  copyText(buildMemoLinesPlain(orgMemos), '全メモをコピーした。');
+}
+
+/* ─── ② 選択コピー（普通・プロンプトなし） ─── */
+function copySelected() {
+  if (selectedIds.size === 0) {
+    showToast('メモを選択してください。');
+    return;
+  }
+  const selected = orgMemos.filter(m => selectedIds.has(m.id));
+  copyText(buildMemoLinesPlain(selected), '選択メモをコピーしました。');
+}
+
+/* ─── ③ 全部AI整理（プロンプト付き） ─── */
+function copyAllAI() {
+  if (orgMemos.length === 0) { showToast('メモがまだない。'); return; }
+  copyText(buildAIPrompt(buildMemoLinesWithDate(orgMemos)), 'AIに貼って整理できる形でコピーしました。');
+}
+
+/* ─── ④ 選択AI整理（プロンプト付き） ─── */
+function copySelectedAI() {
+  if (selectedIds.size === 0) {
+    showToast('メモを選択してください。');
+    return;
+  }
+  const selected = orgMemos.filter(m => selectedIds.has(m.id));
+  copyText(buildAIPrompt(buildMemoLinesWithDate(selected)), '選択メモをAI整理用にコピーしました。');
+}
+
+function copyMemo(id) {
+  const memo = orgMemos.find(m => m.id === id);
+  if (!memo) return;
+  copyText(memo.body || memo.text || '', 'コピーしました。AIに貼って整理できます。');
 }
 
 function requestDelete(id) {
@@ -1517,9 +1561,15 @@ function confirmDelete() {
    SHARED UTILS
 ════════════════════════════════════════ */
 function copyText(text, successMsg) {
+  // 現在の画面に応じてトーストを切り替える
+  const notify = (msg) => {
+    const isStorage = document.getElementById('screen-storage').classList.contains('active');
+    if (isStorage) showStorageToast(msg);
+    else showToast(msg);
+  };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text)
-      .then(() => showToast(successMsg))
+      .then(() => notify(successMsg))
       .catch(() => fallbackCopy(text, successMsg));
   } else {
     fallbackCopy(text, successMsg);
@@ -1527,6 +1577,8 @@ function copyText(text, successMsg) {
 }
 
 function fallbackCopy(text, successMsg) {
+  const isStorage = document.getElementById('screen-storage').classList.contains('active');
+  const notify = (msg) => isStorage ? showStorageToast(msg) : showToast(msg);
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
@@ -1535,9 +1587,9 @@ function fallbackCopy(text, successMsg) {
   ta.select();
   try {
     document.execCommand('copy');
-    showToast(successMsg);
+    notify(successMsg);
   } catch(e) {
-    showToast('コピーできなかった。手動でコピーして。');
+    notify('コピーできなかった。手動でコピーして。');
   }
   document.body.removeChild(ta);
 }
@@ -1593,6 +1645,10 @@ document.addEventListener('keydown', e => {
 
 document.getElementById('confirm-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeConfirm();
+});
+
+document.getElementById('storage-confirm-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeStorageConfirm();
 });
 
 /* ─── SERVICE WORKER ─── */
