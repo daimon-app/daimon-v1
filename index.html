@@ -120,35 +120,62 @@ html, body {
 
 /* ─ 保存完了インライン表示 ─ */
 #drop-feedback {
-  display: none;
   position: absolute;
-  top: 50%;
+  top: 32%;
   left: 50%;
-  transform: translate(-50%, -60%);
+  transform: translate(-50%, -50%);
   text-align: center;
   z-index: 50;
   pointer-events: none;
-  animation: fadeIn 0.15s ease;
+  opacity: 0;
+  visibility: hidden;
 }
-#drop-feedback.show { display: block; }
+#drop-feedback.show {
+  visibility: visible;
+  animation: feedbackFlow 5s cubic-bezier(0.4, 0.0, 0.4, 1) forwards;
+}
+
+/* 1.2秒フェードイン → 2.4秒キープ → 1.4秒フェードアウト（計5.0秒）
+   24% = 1.2s / 72% = 3.6s / 100% = 5.0s */
+@keyframes feedbackFlow {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+  24% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 4px));
+  }
+}
 
 .feedback-check {
-  font-size: 64px;
-  color: var(--gold);
+  font-size: 80px;
+  color: #c9a84c;
   line-height: 1.2;
+  text-shadow: 0 0 24px rgba(201,168,76,0.18);
 }
 .feedback-line1 {
-  font-size: 18px;
-  color: var(--text);
-  letter-spacing: 0.18em;
-  margin-top: 14px;
+  font-size: 25px;
+  color: #d8cdb8;
+  letter-spacing: 0.16em;
+  margin-top: 18px;
+  font-weight: 400;
 }
 .feedback-line2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 0.22em;
-  margin-top: 8px;
+  font-size: 32px;
+  font-weight: 600;
+  color: #9aab8f;
+  letter-spacing: 0.20em;
+  margin-top: 14px;
+  text-shadow: 0 0 20px rgba(154,171,143,0.16);
 }
 
 /* 入力欄を一時的に隠す用 */
@@ -157,7 +184,12 @@ html, body {
 #screen-drop.feedback-active #btn-drop-save,
 #screen-drop.feedback-active .drop-label {
   opacity: 0.06;
-  transition: opacity 0.15s;
+}
+#screen-drop #drop-input,
+#screen-drop .drop-sub,
+#screen-drop #btn-drop-save,
+#screen-drop .drop-label {
+  transition: opacity 1.2s ease;
 }
 #screen-drop { position: relative; }
 
@@ -1169,18 +1201,24 @@ function dropSave() {
 function showCheck() {
   const screen = document.getElementById('screen-drop');
   const fb = document.getElementById('drop-feedback');
+
+  // アニメーション再実行のためのリセット
+  fb.classList.remove('show');
+  void fb.offsetWidth;
+
   screen.classList.add('feedback-active');
   fb.classList.add('show');
 
+  // CSS側で5秒（1.2sイン → 2.4sキープ → 1.4sアウト）を完結させ、
+  // JSは終了後の片付けだけ行う
   setTimeout(() => {
     fb.classList.remove('show');
     screen.classList.remove('feedback-active');
-    // そのまま次の入力を受けられる状態に戻す
     dropLastSaved = '';
     const input = document.getElementById('drop-input');
     input.value = '';
     input.focus();
-  }, 1400);
+  }, 5000);
 }
 
 function showFail() {
