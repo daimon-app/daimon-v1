@@ -942,7 +942,7 @@ function saveMemos(memos) {
    ROUTER
 ════════════════════════════════════════ */
 function route() {
-  const hash = location.hash.replace('#', '') || 'organize';
+  const hash = location.hash.replace('#', '') || 'drop';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
   if (hash === 'drop') {
